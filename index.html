@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood Garden 🌸</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Lucide React icons as inline SVG components
+        const Sun = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+        );
+
+        const Flower2 = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 7.5a4.5 4.5 0 1 1 4.5 4.5M12 7.5A4.5 4.5 0 1 0 7.5 12M12 7.5V9m-4.5 3a4.5 4.5 0 1 0 4.5 4.5M7.5 12H9m7.5 0a4.5 4.5 0 1 1-4.5 4.5m4.5-4.5H15m-3 4.5V15"/><circle cx="12" cy="12" r="1"/><path d="m12 16.5 0 5.5"/>
+            </svg>
+        );
+
+        const Heart = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+        );
+
+        const Zap = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+        );
+
+        const Sparkles = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
+            </svg>
+        );
+
+        const FlowerMoodJournal = () => {
+            const [entries, setEntries] = useState([]);
+            const [selectedMood, setSelectedMood] = useState(null);
+            const [note, setNote] = useState('');
+            const [showSuccess, setShowSuccess] = useState(false);
+            const [loading, setLoading] = useState(true);
+
+            const moods = [
+                { name: 'Happy', flower: '🌻', color: 'bg-yellow-100 border-yellow-300', icon: Sun },
+                { name: 'Calm', flower: '🌸', color: 'bg-pink-100 border-pink-300', icon: Flower2 },
+                { name: 'Sweet', flower: '🍓', color: 'bg-red-100 border-red-300', icon: Heart },
+                { name: 'Energetic', flower: '🍊', color: 'bg-orange-100 border-orange-300', icon: Zap },
+                { name: 'Grateful', flower: '🍒', color: 'bg-rose-100 border-rose-300', icon: Heart },
+                { name: 'Peaceful', flower: '🌼', color: 'bg-blue-100 border-blue-300', icon: Sparkles },
+            ];
+
+            useEffect(() => {
+                loadEntries();
+            }, []);
+
+            const loadEntries = async () => {
+                try {
+                    const result = await window.storage.get('mood-entries');
+                    if (result && result.value) {
+                        setEntries(JSON.parse(result.value));
+                    }
+                } catch (error) {
+                    console.log('No previous entries found');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const saveEntry = async () => {
+                if (!selectedMood) return;
+
+                const newEntry = {
+                    id: Date.now(),
+                    mood: selectedMood,
+                    note: note,
+                    date: new Date().toLocaleDateString(),
+                    timestamp: Date.now()
+                };
+
+                const updatedEntries = [newEntry, ...entries];
+                setEntries(updatedEntries);
+
+                try {
+                    await window.storage.set('mood-entries', JSON.stringify(updatedEntries));
+                    setShowSuccess(true);
+                    setTimeout(() => setShowSuccess(false), 2000);
+                    setSelectedMood(null);
+                    setNote('');
+                } catch (error) {
+                    console.error('Failed to save entry:', error);
+                }
+            };
+
+            const getMoodData = (moodName) => {
+                return moods.find(m => m.name === moodName);
+            };
+
+            const todayEntry = entries.find(e => e.date === new Date().toLocaleDateString());
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-orange-50 flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="text-7xl mb-4 animate-bounce">🌸</div>
+                            <div className="text-2xl font-bold text-transparent bg-gradient-to-r from-rose-600 to-orange-500 bg-clip-text">
+                                Growing your garden...
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-orange-50 p-4 md:p-8">
+                    {/* Decorative Background Elements */}
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-20">
+                        <div className="absolute top-10 left-10 text-6xl animate-pulse">🌸</div>
+                        <div className="absolute top-32 right-20 text-5xl animate-pulse" style={{animationDelay: '1s'}}>🍓</div>
+                        <div className="absolute bottom-20 left-1/4 text-7xl animate-pulse" style={{animationDelay: '2s'}}>🍊</div>
+                        <div className="absolute bottom-40 right-1/3 text-6xl animate-pulse" style={{animationDelay: '1.5s'}}>🍒</div>
+                    </div>
+
+                    <div className="max-w-5xl mx-auto relative z-10">
+                        {/* Header */}
+                        <div className="text-center mb-12 pt-8">
+                            <div className="inline-block mb-4">
+                                <div className="flex items-center gap-3 text-6xl mb-2">
+                                    <span className="animate-bounce" style={{animationDelay: '0s'}}>🌸</span>
+                                    <span className="animate-bounce" style={{animationDelay: '0.2s'}}>🍓</span>
+                                    <span className="animate-bounce" style={{animationDelay: '0.4s'}}>🍊</span>
+                                </div>
+                            </div>
+                            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-pink-600 via-rose-500 to-orange-500 bg-clip-text text-transparent mb-3">
+                                Mood Garden
+                            </h1>
+                            <p className="text-xl text-rose-600 font-medium">How are you blooming today?</p>
+                        </div>
+
+                        {/* Today's Entry */}
+                        {!todayEntry ? (
+                            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 md:p-10 mb-10 border border-pink-100">
+                                <h2 className="text-3xl font-bold text-transparent bg-gradient-to-r from-rose-600 to-orange-500 bg-clip-text mb-8">
+                                    Pick your mood
+                                </h2>
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-5 mb-8">
+                                    {moods.map((mood) => {
+                                        const Icon = mood.icon;
+                                        return (
+                                            <button
+                                                key={mood.name}
+                                                onClick={() => setSelectedMood(mood.name)}
+                                                className={`${mood.color} border-2 rounded-2xl p-8 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+                                                    selectedMood === mood.name ? 'ring-4 ring-rose-400 scale-105 shadow-xl' : ''
+                                                }`}
+                                            >
+                                                <div className="text-6xl mb-3 transform transition-transform hover:rotate-12">
+                                                    {mood.flower}
+                                                </div>
+                                                <div className="font-bold text-gray-700 flex items-center justify-center gap-2 text-lg">
+                                                    <Icon size={18} />
+                                                    {mood.name}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {selectedMood && (
+                                    <div className="space-y-5 animate-fade-in">
+                                        <textarea
+                                            value={note}
+                                            onChange={(e) => setNote(e.target.value)}
+                                            placeholder="Optional: What made you feel this way today?..."
+                                            className="w-full p-5 border-2 border-pink-200 rounded-2xl focus:border-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-100 resize-none transition-all"
+                                            rows="4"
+                                        />
+                                        <button
+                                            onClick={saveEntry}
+                                            className="w-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] text-lg"
+                                        >
+                                            Plant Today's Bloom 🌱✨
+                                        </button>
+                                    </div>
+                                )}
+
+                                {showSuccess && (
+                                    <div className="mt-6 bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-400 rounded-2xl p-5 text-center text-green-800 font-bold text-lg animate-fade-in">
+                                        ✨ Your bloom has been planted in the garden! 🌸
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-10 mb-10 text-center border border-pink-100">
+                                <div className="text-8xl mb-6 animate-bounce">{getMoodData(todayEntry.mood)?.flower}</div>
+                                <h2 className="text-3xl font-bold text-transparent bg-gradient-to-r from-rose-600 to-orange-500 bg-clip-text mb-3">
+                                    Today's Bloom
+                                </h2>
+                                <p className="text-rose-600 text-xl mb-3 font-medium">You're feeling {todayEntry.mood.toLowerCase()}</p>
+                                {todayEntry.note && (
+                                    <p className="text-gray-700 italic mt-6 p-6 bg-gradient-to-br from-pink-50 to-orange-50 rounded-2xl border border-pink-200 text-lg">
+                                        "{todayEntry.note}"
+                                    </p>
+                                )}
+                                <p className="text-sm text-gray-500 mt-6 font-medium">Come back tomorrow to add another bloom! 🌸</p>
+                            </div>
+                        )}
+
+                        {/* Garden Display */}
+                        {entries.length > 0 && (
+                            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 md:p-10 border border-pink-100">
+                                <h2 className="text-3xl font-bold text-transparent bg-gradient-to-r from-rose-600 to-orange-500 bg-clip-text mb-8">
+                                    Your Emotional Garden
+                                </h2>
+                                
+                                {/* Flower Garden Grid */}
+                                <div className="flex flex-wrap gap-4 mb-10 p-8 bg-gradient-to-br from-pink-100 via-rose-100 to-orange-100 rounded-2xl min-h-[250px] border-2 border-pink-200 shadow-inner">
+                                    {entries.map((entry) => (
+                                        <div
+                                            key={entry.id}
+                                            className="group relative"
+                                            title={`${entry.mood} - ${entry.date}`}
+                                        >
+                                            <div className="text-5xl transform transition-all duration-300 hover:scale-150 hover:rotate-12 cursor-pointer drop-shadow-lg">
+                                                {getMoodData(entry.mood)?.flower}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Garden Stats */}
+                                <div className="mb-8 text-center">
+                                    <div className="inline-block bg-gradient-to-r from-rose-100 to-orange-100 rounded-2xl px-8 py-4 border-2 border-pink-200">
+                                        <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text">
+                                            🌺 {entries.length} blooms planted
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Recent Entries */}
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-rose-700 mb-5 text-xl">Recent Blooms</h3>
+                                    {entries.slice(0, 7).map((entry) => {
+                                        const moodData = getMoodData(entry.mood);
+                                        return (
+                                            <div
+                                                key={entry.id}
+                                                className={`${moodData?.color} border-2 rounded-2xl p-5 flex items-start gap-5 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]`}
+                                            >
+                                                <div className="text-4xl">{moodData?.flower}</div>
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-gray-800 text-lg">{entry.mood}</div>
+                                                    <div className="text-sm text-gray-600 font-medium">{entry.date}</div>
+                                                    {entry.note && (
+                                                        <div className="text-sm text-gray-700 mt-3 italic leading-relaxed">"{entry.note}"</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<FlowerMoodJournal />, document.getElementById('root'));
+    </script>
+</body>
+</html>
